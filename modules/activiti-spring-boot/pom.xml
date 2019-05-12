@@ -12,6 +12,7 @@
 
 
     <artifactId>activiti-spring-boot</artifactId>
+    <version>6.0.0-boot2.0</version>
 
     <packaging>pom</packaging>
 

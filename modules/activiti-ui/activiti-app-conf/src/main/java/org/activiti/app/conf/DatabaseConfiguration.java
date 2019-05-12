@@ -157,7 +157,7 @@ public class DatabaseConfiguration {
   }
 
   @Bean(name = "entityManagerFactory")
-  public EntityManagerFactory entityManagerFactory() {
+  public LocalContainerEntityManagerFactoryBean entityManagerFactory() {
     log.info("Configuring EntityManager");
     LocalContainerEntityManagerFactoryBean lcemfb = new LocalContainerEntityManagerFactoryBean();
     lcemfb.setPersistenceProvider(new HibernatePersistence());
@@ -173,7 +173,7 @@ public class DatabaseConfiguration {
 
     lcemfb.setPackagesToScan("org.activiti.app.domain");
     lcemfb.afterPropertiesSet();
-    return lcemfb.getObject();
+    return lcemfb;
   }
 
   @Bean
@@ -192,7 +192,7 @@ public class DatabaseConfiguration {
   @Bean(name = "transactionManager")
   public PlatformTransactionManager annotationDrivenTransactionManager() {
     JpaTransactionManager jpaTransactionManager = new JpaTransactionManager();
-    jpaTransactionManager.setEntityManagerFactory(entityManagerFactory());
+    jpaTransactionManager.setEntityManagerFactory(entityManagerFactory().getObject());
     return jpaTransactionManager;
   }
 
