@@ -28,7 +28,9 @@
             org.activiti.spring.boot
         </activiti.artifact>
 
-        <spring.boot.version>1.2.6.RELEASE</spring.boot.version>
+        <spring.boot.version>2.0.0.RELEASE</spring.boot.version>
+        <spring.framework.version>5.0.4.RELEASE</spring.framework.version>
+        <spring.security.version>5.0.3.RELEASE</spring.security.version>
         <!--<spring.framework.version>${spring.framework.version}</spring.framework.version>-->
 
     </properties>

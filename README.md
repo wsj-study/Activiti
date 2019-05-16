@@ -56,271 +56,255 @@ Activiti QA: http://build.activiti.org:8080
 	
 	git add * 添加当前目录机器子目录下的update 文件
 	
-三、工作流平台的搭建
-	
-	1、基于Activiti-ui 工程升级搭建平台
-		1.1升级acitivit-spring-boot模块依赖版本
-		1.2改造activit-ui为Srping boot 工程省级搭建平台
-		1.3基于改造后的acitivit-ui创建workflow工程
-	2、开发步骤
-		2.1.基于源码Activiti6.0.0版本checkout出新的base分支
-		2.2定义acitivit-spring-boot、activiti-ui及子模块版本6.0.0-boot2.0
-		2.3基于activiti-ui依赖版本6.0.0-boot2运行activiti-app模块
-		
-		2.4改造acitiviti-app为spring boot 工程
-		2.5升级acitiviti-ui使用acitivit-spring-boot-starter*6.0.0-boot2.0
-		2.6启动运行基于spring boot 工程activiti-app
-		
-		2.7升级activiti-spring-boot依赖boot2.0版本:编译、排错、安装
-		2.8重新安装acitivit-ui:编译、排错、安装
-		2.9启动运行基于spring boot2工程activiti-app
-		
-	3.搭建我们自己的工作流平台
-		3.1创建新的独立工程workflow
-		3.2添加依赖(6.0.0)及配置文件
-		3.3集成web相关资源文件
-四、操作
-	
-	4.1 基于源码acitivit-6.0.0 创建两个分支
-		git checkout -b v6.0 acitivit-6.0.0
-		
-		git checkout -b boot acitivit-6.0.0
-		
-		
-	4.2 boot 分支下 activiti-spring-boot 模块下设置版本
-
-		mvn versions:set -DnewVersion=6.0.0-boot2.0(该模块没有设置自己版本号依赖的父版本 手动设置版本号(6.0.0) 重新操作 他的子模块也是依赖的父版本即自己版本)
-		
-	4.3 安装版本 activiti-spring-boot
-		
-		mvn clean install source:jar -Dmaven.test.skip=true 
-		(安装失败 版本号现在是6.0.0-boot2.0 but activiti依赖的版本还是6.0.0 不是6.0.0-boot2.0 需要手动指定版本6.0.0
-		在acitivit-spring-boot directory 下 全局替换${project.version}==> 6.0.0再次执行
-		mvn clean install source:jar -Dmaven.test.skip=true 
-		安装失败 activiti-spring-boot-starter-basic jar  activit 相关6.0.0-boot2.0找不到 (但是在activiti-spring-boot-starter-basic能向上链接到activiti-root版本 已经指定了对应版本)
-		
-			在activit-root 新加 <activiti-version>6.0.0</activiti-version> 把 activiti-root.pom 下的 project.version 修改为 activiti-version
-			
-		mvn clean install source:jar -Dmaven.test.skip=true  安装成功	
-		)
-	4.4 安装版本 acitivit-ui
-	
-		1.指定acvitivi-ui 版本 6.0.0
-		2.mvn versions:set -DnewVersion=6.0.0-boot2.0
-		3.mvn clean install source:jar -Dmaven.test.skip=true
-		4.cd acitivit-app       mvn clean tomcat7:run 启动看是否有问题
-		
-		4.升级改造为springboot工程
-			1.activiti-app pom下添加依赖
-			<dependency>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-starter-web</artifactId>
-				<version>1.2.6.RELEASE</version>
-			</dependency>
-			 <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <version>1.2.6.RELEASE</version>
-            </plugin>
-			2.acitivit-app src 创建java 目录 创建package org.activiti.app.ui(org.activiti.app为原包结构保持一致)
-				创建springboot 启动类
-					
-					@SpringBootApplication
-					public class ActivitiUIApplication extends SpringBootServletInitializer {
-
-						public static void main(String[] args) {
-							SpringApplication.run(ActivitiUIApplication.class, args);
-						}
-
-						@Override
-						protected SpringApplicationBuilder configure(SpringApplicationBuilder builder) {
-							return builder.sources(ActivitiUIApplication.class);
-						}
-
-						@Bean
-						public ServletRegistrationBean apiDispatcher() {
-							DispatcherServlet api = new DispatcherServlet();
-							//设置 启动用的spring容器 用的是哪个实现类
-							api.setContextClass(AnnotationConfigWebApplicationContext.class);
-							//对应java配置类是哪个
-							api.setContextConfigLocation(ApiDispatcherServletConfiguration.class.getName());
-							ServletRegistrationBean registrationBean = new ServletRegistrationBean();
-							registrationBean.setServlet(api);
-							registrationBean.addUrlMappings("/api/*");
-							registrationBean.setLoadOnStartup(1);
-							registrationBean.setAsyncSupported(true);
-							registrationBean.setName("api");
-							return registrationBean;
-						}
-
-						@Bean
-						public ServletRegistrationBean appDispatcher() {
-							DispatcherServlet app = new DispatcherServlet();
-							//设置 启动用的spring容器 用的是哪个实现类
-							app.setContextClass(AnnotationConfigWebApplicationContext.class);
-							//对应java配置类是哪个
-							app.setContextConfigLocation(AppDispatcherServletConfiguration.class.getName());
-							ServletRegistrationBean registrationBean = new ServletRegistrationBean();
-							registrationBean.setServlet(app);
-							registrationBean.addUrlMappings("/app/*");
-							registrationBean.setLoadOnStartup(1);
-							registrationBean.setAsyncSupported(true);
-							registrationBean.setName("app");
-							return registrationBean;
-						}
-				
-					}
-
-
-
-			3.mvn clean spring-boot:run 排错
-				1.exclude slf4j
-				2.  报错Caused by: java.lang.IllegalStateException: Cannot find changelog location: class path resource [db/changelog/db.changelog-master.yaml] (please add changelog or check your Liquibase configuration)
-					解决 禁用 application.yml
-						liquibase:
-							enabled: false
-				3.	报错Caused by: java.lang.IllegalArgumentException: Cannot find template location(s): [classpath:/templates/] (please add some templates, check your FreeMarker configuration, or set spring.freemarker.checkTemplateLocation=false)
-					解决 禁用 application.yml
-						spring:
-						  freemarker:
-							check-template-location: false
-				4   各种bean 无法装载
-					org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'abstractModelHistoryResource': Injection of autowired dependencies failed; nested exception is org.springframework.beans.factory.BeanCreationException: Could not autowire field: protected org.activiti.app.service.api.ModelService org.activiti.app.rest.editor.AbstractModelHistoryResource.modelService; nested exception is org.springframework.beans.factory.NoSuchBeanDefinitionException: No qualifying bean of type [org.activiti.app.service.api.ModelService] found for dependency: expected at least 1 bean which qualifies as autowire candidate for this dependency. Dependency annotations: {@org.springframework.beans.factory.annotation.Autowired(required=true)}
-					Caused by: org.springframework.beans.factory.BeanCreationException: Could not autowire field: protected org.activiti.app.service.api.ModelService org.activiti.app.rest.editor.AbstractModelHistoryResource.modelService; nested exception is org.springframework.beans.factory.NoSuchBeanDefinitionException: No qualifying bean of type [org.activiti.app.service.api.ModelService] found for dependency: expected at least 1 bean which qualifies as autowire candidate for this dependency. Dependency annotations: {@org.springframework.beans.factory.annotation.Autowired(required=true)}
-					Caused by: org.springframework.beans.factory.NoSuchBeanDefinitionException: No qualifying bean of type [org.activiti.app.service.api.ModelService] found for dependency: expected at least 1 bean which qualifies as autowire candidate for this dependency. Dependency annotations: {@org.springframework.beans.factory.annotation.Autowired(required=true)}
-					Caused by: org.springframework.beans.factory.BeanCreationException: Could not autowire field: protected org.activiti.app.service.api.ModelService org.activiti.app.rest.editor.AbstractModelHistoryResource.modelService; nested exception is org.springframework.beans.factory.NoSuchBeanDefinitionException: No qualifying bean of type [org.activiti.app.service.api.ModelService] found for dependency: expected at least 1 bean which qualifies as autowire candidate for this dependency. Dependency annotations: {@org.springframework.beans.factory.annotation.Autowired(required=true)}
-					Caused by: org.springframework.beans.factory.NoSuchBeanDefinitionException: No qualifying bean of type [org.activiti.rest.service.api.RestResponseFactory] found for dependency: expected at least 1 bean which qualifies as autowire candidate for this dependency. Dependency annotations: {@org.springframework.beans.factory.annotation.Autowired(required=true)}
-					启动类添加注解
-						@ComponentScan(basePackages = {
-							"org.activiti.app.conf",
-							"org.activiti.app.repository",
-							"org.activiti.app.service",
-							"org.activiti.app.security",
-							"org.activiti.app.model.component"}) 或者 @Import(ApplicationConfiguration.class)
-				
-				5.activiti-app.properties 中 security.rememberme.key=testkey 属性 和 spring [org.springframework.boot.autoconfigure.security.SecurityProperties]: Bean property 'rememberme[key] 冲突
-					
-					security.rememberme.key=testkey 修改为 appconf.security.rememberme.key=testkey  全局查找替换 修改其他模块的参数 activiti-app-conf 需要重新安装保证一直
-					
-					activiti-app 目录下 mvn clean install source:jar -Dmaven.test.skip=true  安装成功	
-				
-				6.Caused by: java.lang.IllegalArgumentException: Not an managed type: class org.activiti.app.domain.idm.PersistentToken at org.hibernate.ejb.metamodel.MetamodelImpl.managedType(MetamodelImpl.java:200)
-					
-					添加注解 @EntityScan(basePackages={"org.activiti.app.domain"})
-					
-				7.
-					Caused by: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'entityManagerFactory' defined in class path resource [org/springframework/boot/autoconfigure/orm/jpa/HibernateJpaAutoConfiguration.class]: Invocation of init method failed; nested exception is javax.persistence.PersistenceException: [PersistenceUnit: default] Unable to build EntityManagerFactory
-
-					Caused by: javax.persistence.PersistenceException: [PersistenceUnit: default] Unable to build EntityManagerFactory
-							at org.hibernate.ejb.Ejb3Configuration.buildEntityManagerFactory(Ejb3Configuration.java:925)
-							at org.hibernate.ejb.Ejb3Configuration.buildEntityManagerFactory(Ejb3Configuration.java:900)
-						...好多
-					Caused by: org.hibernate.cache.NoCacheRegionFactoryAvailableException: Second-level cache is used in the application, but property hibernate.cache.region.factory_class is not given, please either disable second level cache or set correct region factory class name to property hibernate.cache.region.factory_class (and make sure the second level cache provider, hibernate-infinispan, for example, is available in the classpath).
-						at org.hibernate.cache.internal.NoCachingRegionFactory.buildEntityRegion(NoCachingRegionFactory.java:69)
-						at org.hibernate.internal.SessionFactoryImpl.<init>(SessionFactoryImpl.java:352)
-						at org.hibernate.cfg.Configuration.buildSessionFactory(Configuration.java:1799)
-						at org.hibernate.ejb.EntityManagerFactoryImpl.<init>(EntityManagerFactoryImpl.java:96)
-						at org.hibernate.ejb.Ejb3Configuration.buildEntityManagerFactory(Ejb3Configuration.java:915)
-	
-				解决  修改 org.activiti.app.conf.DatabaseConfiguration  返回值 LocalContainerEntityManagerFactoryBean 而不是接口  （没明白 不是一样的吗 别的地方也有这个类 内容）
-				
-					@Bean(name = "entityManagerFactory")
-					  public LocalContainerEntityManagerFactoryBean entityManagerFactory() {
-						log.info("Configuring EntityManager");
-						LocalContainerEntityManagerFactoryBean lcemfb = new LocalContainerEntityManagerFactoryBean();
-						lcemfb.setPersistenceProvider(new HibernatePersistence());
-						lcemfb.setPersistenceUnitName("persistenceUnit");
-						lcemfb.setDataSource(dataSource());
-						lcemfb.setJpaDialect(new HibernateJpaDialect());
-						lcemfb.setJpaVendorAdapter(jpaVendorAdapter());
-
-						Properties jpaProperties = new Properties();
-						jpaProperties.put("hibernate.cache.use_second_level_cache", false);
-						jpaProperties.put("hibernate.generate_statistics", env.getProperty("hibernate.generate_statistics", Boolean.class, false));
-						lcemfb.setJpaProperties(jpaProperties);
-
-						lcemfb.setPackagesToScan("org.activiti.app.domain");
-						lcemfb.afterPropertiesSet();
-						return lcemfb;
-					  }
-
-					 @Bean(name = "transactionManager")
-					  public PlatformTransactionManager annotationDrivenTransactionManager() {
-						JpaTransactionManager jpaTransactionManager = new JpaTransactionManager();
-						jpaTransactionManager.setEntityManagerFactory(entityManagerFactory().getObject());
-						return jpaTransactionManager;
-					  }
-
-					修改了子模块代码 重新安装 mvn clean install source:jar -Dmaven.test.skip=true
-					
-					启动成功
-
-				8.添加依赖
-					<dependency>
-						<groupId>org.springframework.boot</groupId>
-						<artifactId>spring-boot-starter-actuator</artifactId>
-						<version>1.2.6.RELEASE</version>
-					</dependency>
-
-					<dependency>
-						<groupId>org.springframework.boot</groupId>
-						<artifactId>spring-boot-starter-hateoas</artifactId>
-						<version>1.2.6.RELEASE</version>
-					</dependency>
-					重新启动 报错
-					Caused by: org.springframework.beans.factory.BeanCreationException: Could not autowire field: private com.fasterxml.jackson.databind.ObjectMapper org.springframework.boot.autoconfigure.hateoas.HypermediaAutoConfiguration$HypermediaConfiguration$HalObjectMapperConfiguration.primaryObjectMapper; nested exception is org.springframework.beans.factory.NoUniqueBeanDefinitionException: No qualifying bean of type [com.fasterxml.jackson.databind.ObjectMapper] is defined: expected single matching bean but found 2: objectMapper,_halObjectMapper
-						
-						有两个 objectMapper  去掉一个 org.activiti.app.conf.JacksonConfiguration 注释掉这个类
-						重新安装  mvn clean install source:jar -Dmaven.test.skip=true 继续启动
-
-
-
-
-				9====================升级acitiviti-ui使用acitivit-spring-boot-starter*6.0.0-boot2.0
-				
-					1.acitivit-app 添加依赖
-						<dependency>
-							<groupId>org.activiti</groupId>
-							<artifactId>activiti-spring-boot-starter-basic</artifactId>
-							<version>6.0.0</version>
-						</dependency>
-					
-					
-					Caused by: org.springframework.beans.BeanInstantiationException: Failed to instantiate [org.activiti.spring.SpringProcessEngineConfiguration]: Factory method 'springProcessEngineConfiguration' threw exception; nested exception is java.io.FileNotFoundException: class path resource [processes/] cannot be resolved to URL because it does not exist
-						at org.springframework.beans.factory.support.SimpleInstantiationStrategy.instantiate(SimpleInstantiationStrategy.java:189)
-						at org.springframework.beans.factory.support.ConstructorResolver.instantiateUsingFactoryMethod(ConstructorResolver.java:588)
-						... 139 more
-					Caused by: java.io.FileNotFoundException: class path resource [processes/] cannot be resolved to URL because it does not exist
-						
-						解决1、resource 下 创建 drectory processes 放一个流程定义文件
-							2、application.yml 禁用检查
-								activiti:
-									check-process-definitions: false
-
-					2.运行
-						
-						Caused by: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'rememberMeServices': Injection of autowired dependencies failed; nested exception is org.springframework.beans.factory.BeanCreationException: Could not autowire field: private org.activiti.app.security.CustomUserDetailService org.activiti.app.security.CustomPersistentRememberMeServices.customUserDetailService; nested exception is org.springframework.beans.factory.NoSuchBeanDefinitionException: No qualifying bean of type [org.activiti.app.security.CustomUserDetailService] found for dependency: expected at least 1 bean which qualifies as autowire candidate for this dependency. Dependency annotations: {@org.springframework.beans.factory.annotation.Autowired(required=true)}
-					
-						Caused by: org.springframework.beans.factory.BeanCreationException: Could not autowire field: private org.activiti.app.security.CustomUserDetailService org.activiti.app.security.CustomPersistentRememberMeServices.customUserDetailService; nested exception is org.springframework.beans.factory.NoSuchBeanDefinitionException: No qualifying bean of type [org.activiti.app.security.CustomUserDetailService] found for dependency: expected at least 1 bean which qualifies as autowire candidate for this dependency. Dependency annotations: {@org.springframework.beans.factory.annotation.Autowired(required=true)}
-
-						Caused by: org.springframework.beans.factory.NoSuchBeanDefinitionException: No qualifying bean of type [org.activiti.app.security.CustomUserDetailService] found for dependency: expected at least 1 bean which qualifies as autowire candidate for this dependency. Dependency annotations: {@org.springframework.beans.factory.annotation.Autowired(required=true)}
-
-						解决排除 activiti 的 SecurityAutoConfiguration @SpringBootApplication(exclude = {org.activiti.spring.boot.SecurityAutoConfiguration.SecurityAutoConfiguration.class})
-					3.运行
-						
-						java.lang.IllegalArgumentException: Unsupported scheduler type: class org.springframework.core.task.SimpleAsyncTaskExecutor
-
-						
-						Caused by: java.lang.IllegalArgumentException: Unsupported scheduler type: class org.springframework.core.task.SimpleAsyncTaskExecutor
-							at org.springframework.scheduling.config.ScheduledTaskRegistrar.setScheduler(ScheduledTaskRegistrar.java:93)
-							
-							at org.activiti.app.conf.SchedulingConfiguration.configureTasks(SchedulingConfiguration.java:35)  ====》 SchedulingConfiguration
-							
-						
-						解决 定时任务冲突 org.activiti.app.conf.SchedulingConfiguration 注释掉这个类
-							重新安装
-							mvn clean install source:jar -Dmaven.test.skip=true
-
+    
+                    10、
+    					2.7升级activiti-spring-boot依赖boot2.0版本:编译、排错、安装
+    					2.8重新安装acitivit-ui:编译、排错、安装
+    					2.9启动运行基于spring boot2工程activiti-app
+    	
+    					
+    					1.基于boot分支 创建分支 boot2
+    						
+    						1.1git checkout -b boot2
+    						
+    						1.2cd  activiti-spring-boot 目录下 mvn versions:set -DnewVersion=6.0.0-boot2.0 修改版本成功
+    						
+    						1.3修改activiti-spring-boot pom <spring.boot.version>1.2.6.RELEASE</spring.boot.version> =》<spring.boot.version>2.0.0.RELEASE</spring.boot.version>
+    						
+    							add <spring.framework.version>5.0.4.RELEASE</spring.framework.version>
+    								<spring.security.version>5.0.3.RELEASE</spring.security.version>
+    						1.4 mvn clean test-compile
+    							
+    							activiti-spring-boot 右键 git 跟 study6 比较 修改代码
+    							
+    							mvn clean test-compile 
+    							
+    							删除包结构重新引入(不断)
+    						1.5 mvn clean install source:jar  -Dmaven.test.skip=true	(安装)
+    						
+    				11.重新安装acitivit-ui:编译、排错、安装 升级为boot2.0
+    					
+    					1.cd activiti-ui 下
+    						修改版本 mvn versions:set -DnewVersion=6.0.0-boot2.0
+    						
+    						activiti-ui-root.pom 修改
+    						
+    						<activiti.version>6.0.0</activiti.version>
+    
+    						<spring.boot.version>2.0.0.RELEASE </spring.boot.version>
+    						<spring.version>5.0.4.RELEASE </spring.version>
+    						<spring.security.version>5.0.3.RELEASE</spring.security.version>
+    						<hibernate.version>5.2.14.Final</hibernate.version>
+    						<jackson.version>2.9.4</jackson.version>
+    						<codahale.metrics.version>3.0.2</codahale.metrics.version>
+    						<hazelcastcache.version>3.1.5</hazelcastcache.version>
+    						<batik.version>1.7</batik.version>
+    						<jetty.version>9.1.3.v20140225</jetty.version>
+    						
+    						<dependency>
+    							<groupId>org.liquibase</groupId>
+    							<artifactId>liquibase-core</artifactId>
+    							<version>3.6.1</version>
+    						</dependency>
+    						
+    						<dependency>
+    							<groupId>javax.validation</groupId>
+    							<artifactId>validation-api</artifactId>
+    							<version>2.0.1.Final</version>
+    						</dependency>
+    						
+    						<dependency>
+    							<groupId>org.jadira.usertype</groupId>
+    							<artifactId>usertype.core</artifactId>
+    							<version>6.0.1.GA</version>
+    						</dependency>
+    						
+    						<dependency>
+    							<groupId>org.springframework.data</groupId>
+    							<artifactId>spring-data-jpa</artifactId>
+    							<version>2.0.5.RELEASE</version>
+    						</dependency>
+    						
+    						 <dependency>
+    							<groupId>org.freemarker</groupId>
+    							<artifactId>freemarker</artifactId>
+    							<version>2.3.28</version>
+    						</dependency>
+    					2.mvn clean test-compile
+    						activiti-app-logic 下 全文替换 findOne ==> getOne (改变了)
+    						
+    						构造 适合的参数
+    						Model model = new Model();
+    						model.setId(appModelDefinition.getId());
+    						Example<Model> example = Example.of(model);
+    	
+    						modelRelationRepository.delete(persistedModelRelations);  ==》 modelRelationRepository.deleteAll(persistedModelRelations);
+    						
+    							构造适合的参数  捕获异常
+    																		 try {
+    							d = ISO8601Utils.parse(date);   =====》			d = ISO8601Utils.parse(date,new ParsePosition(0));
+    																		} catch (ParseException e) {
+    																		  e.printStackTrace();
+    																		}
+    						org.activiti.app.conf.DatabaseConfiguration 注解  移动到org.activiti.app.conf.ApplicationConfiguration 类上   再添加 @EntityScan(basePackages={"org.activiti.app.domain"}) (导入spring-boot-autoconfigure) jar
+    																		配置文件关闭 2级缓存 然后注释掉这个类
+    																		
+    																		@EnableJpaRepositories({ "org.activiti.app.repository" })
+    																		@EnableTransactionManagement
+    	
+    						
+    						org.activiti.app.conf.ActivitiEngineConfiguration 下拷贝  到    org.activiti.spring.boot.AbstractProcessEngineAutoConfiguration  springRejectedJobsHandler() 方法尾部 导入对用jar
+    						
+    														FormEngineConfiguration formEngineConfiguration = new FormEngineConfiguration();
+    									formEngineConfiguration.setDataSource(dataSource);
+    									
+    									FormEngineConfigurator formEngineConfigurator = new FormEngineConfigurator();
+    									formEngineConfigurator.setFormEngineConfiguration(formEngineConfiguration);
+    									processEngineConfiguration.addConfigurator(formEngineConfigurator);
+    									
+    									DmnEngineConfiguration dmnEngineConfiguration = new DmnEngineConfiguration();
+    									dmnEngineConfiguration.setDataSource(dataSource);
+    								  
+    								  DmnEngineConfigurator dmnEngineConfigurator = new DmnEngineConfigurator();
+    								  dmnEngineConfigurator.setDmnEngineConfiguration(dmnEngineConfiguration);
+    								  processEngineConfiguration.addConfigurator(dmnEngineConfigurator);
+    	 
+    						复制3个方法 改造
+    						
+    						@Bean	
+    						public FormRepositoryService formEngineRepositoryService() {
+    						  return processEngine().getFormEngineRepositoryService();
+    						}
+    						
+    						@Bean
+    						public org.activiti.form.api.FormService formEngineFormService() {
+    						  return processEngine().getFormEngineFormService();
+    						}
+    						
+    						Bean(name="clock")
+    						@DependsOn("processEngine")
+    						public Clock getClock() {
+    							return processEngineConfiguration().getClock();
+    						}
+    						
+    						||
+    						||
+    						
+    						  @Bean
+    						  @ConditionalOnMissingBean
+    						  public FormRepositoryService formEngineRepositoryService(ProcessEngine processEngine) {
+    							return processEngine.getFormEngineRepositoryService();
+    						  }
+    
+    						  @Bean
+    						  @ConditionalOnMissingBean
+    						  public org.activiti.form.api.FormService formEngineFormService(ProcessEngine processEngine) {
+    							return processEngine.getFormEngineFormService();
+    						  }
+    
+    						  @Bean
+    						  @ConditionalOnMissingBean
+    						  public Clock clock(SpringProcessEngineConfiguration configuration) {
+    							return configuration.getClock();
+    						  }
+    						
+    						注释掉 ActivitiEngineConfiguration 类
+    					3.切换到activiti-spring-boot(修改代码了) 安装 mvn clean install source:jar -Dmaven.test.skip=true
+    						切换到activiti-ui  编译 mvn clean test-compile
+    						
+    						mvn clean install source:jar -Dmaven.test.skip=true
+    						mvn clean test-compile
+    						
+    						
+    						启动acitivit-app 报错版本冲突
+    							activiti-app.pom 1.2.6修改为2.0.0 
+    							activiti-spring-boot-starter-basic 版本 6.0.0修改为6.0.0-boot2.0
+    							在修改入口类  ===》包结构变化
+    						运行activiti-app
+    						
+    							日志jar 冲突 排除 activiti-app.pox 引入的6.0.0-boot2.0 的 slf4j-log4j12
+    							再次启动  成功
+    							
+    							登录网页报错
+    							http://localhost:9999/activiti-app/
+    							
+    							解决
+    							后台空指针异常 进入 发现打印日志报的错(spring 1.2.6 参数为 false 2.0.0 true log 为 final类 使用cglib 子类不能复写final class 的)
+    								修改配置文件添加
+    									aop:
+    										proxy-target-class: false
+    							在此启动 acitivit-app
+    							http://localhost:9999/activiti-app/报错  no Session
+    							
+    							org.hibernate.LazyInitializationException: could not initialize proxy - no Session
+    							at org.hibernate.proxy.AbstractLazyInitializer.initialize(AbstractLazyInitializer.java:155)
+    							at org.hibernate.proxy.AbstractLazyInitializer.getImplementation(AbstractLazyInitializer.java:268)
+    							at org.hibernate.proxy.pojo.javassist.JavassistLazyInitializer.invoke(JavassistLazyInitializer.java:73)
+    							
+    							解决 读取懒加载 session 可能关闭  打开open session view 过滤器
+    							(默认是true 手动设置) 并且配置对用的bean 启动类里面配置
+    
+    							open-in-view: true
+    							
+    							@Bean
+    							public FilterRegistrationBean openEntityManagerInViewFilter(){
+    								FilterRegistrationBean bean = new FilterRegistrationBean(new OpenEntityManagerInViewFilter());
+    								bean.addUrlPatterns("/*");
+    								bean.setName("openEntityManagerInViewFilter");
+    								bean.setOrder(-200);
+    								bean.setDispatcherTypes(EnumSet.of(DispatcherType.REQUEST,
+    										DispatcherType.FORWARD,
+    										DispatcherType.ASYNC));
+    								return bean;
+    							}
+    													(自动 生成sql语句 程序启动的时候创建) 
+    							generate-ddl: true
+    							
+    							
+    							org.activiti.app.security.CustomPersistentRememberMeServices 修改 
+    							
+    							if (token == null) {
+    							  // No series match, so we can't authenticate using this cookie
+    							  throw new RememberMeAuthenticationException("No persistent token found for series id: " + presentedSeries);
+    							}
+    							修改为
+    							try {
+    							  if (token == null || token.getTokenValue() ==null) {
+    								// No series match, so we can't authenticate using this cookie
+    								throw new RememberMeAuthenticationException("No persistent token found for series id: " + presentedSeries);
+    							  }
+    							}catch (Exception e){
+    							  
+    							  throw new RememberMeAuthenticationException("No persistent token found for series id: " + presentedSeries);
+    
+    							}
+    							
+    							重新安装 acitivit-ui mvn clean install source:jar -Dmaven.test.skip=true
+    							
+    							再次启动
+    							
+    					4.配置activiti-ui 页面 在不使用tomcat 容器访问路径问题		
+    							1、scripts/common/services/runtime-app-definition-service.js 文件下
+    								
+    								var urls = {
+    									editor: baseUrl + '/editor/',
+    									identity: baseUrl + '/idm/',
+    									workflow: baseUrl + '/workflow/',
+    									admin: 'http://localhost:8080/activiti-admin',
+    									analytics: baseUrl + '/analytics/'
+    								};
+    								修改为
+    								
+    								var urls = {
+    									editor: baseUrl + '/editor/index.html',
+    									identity: baseUrl + '/idm/index.html',
+    									workflow: baseUrl + '/workflow/index.html',
+    									admin: 'http://localhost:8080/activiti-admin',
+    									analytics: baseUrl + '/analytics/'
+    								};
+    							
+    							
+    							
 	
 				
 	

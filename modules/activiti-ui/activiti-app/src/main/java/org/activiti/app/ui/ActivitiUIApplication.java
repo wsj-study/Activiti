@@ -7,16 +7,20 @@ import org.activiti.spring.boot.SecurityAutoConfiguration;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.boot.context.embedded.ServletRegistrationBean;
-import org.springframework.boot.context.web.SpringBootServletInitializer;
-import org.springframework.boot.orm.jpa.EntityScan;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.boot.web.servlet.ServletRegistrationBean;
+import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.orm.jpa.support.OpenEntityManagerInViewFilter;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import org.springframework.web.servlet.DispatcherServlet;
 
-//@EnableJpaRepositories({ "org.activiti.app.repository" })
-@EntityScan(basePackages={"org.activiti.app.domain"})
+import javax.servlet.DispatcherType;
+import java.util.EnumSet;
+
+
 @Import(ApplicationConfiguration.class)
 @SpringBootApplication(exclude = {SecurityAutoConfiguration.class})
 public class ActivitiUIApplication extends SpringBootServletInitializer {
@@ -61,7 +65,7 @@ public class ActivitiUIApplication extends SpringBootServletInitializer {
 		registrationBean.setName("app");
 		return registrationBean;
 	}
-/*
+	/*配置 过滤器 open-in-view: true*/
 	@Bean
 	public FilterRegistrationBean openEntityManagerInViewFilter(){
 		FilterRegistrationBean bean = new FilterRegistrationBean(new OpenEntityManagerInViewFilter());
@@ -72,6 +76,6 @@ public class ActivitiUIApplication extends SpringBootServletInitializer {
 				DispatcherType.FORWARD,
 				DispatcherType.ASYNC));
 		return bean;
-	}*/
+	}
 
 }
